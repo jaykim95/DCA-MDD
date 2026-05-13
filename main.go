@@ -287,7 +287,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		Symbol:    "QQQ",
 		Amount:    1000,
 		StartDate: "2017-01-03",
-		Interval:  "monthly",
+		Interval:  "weekly",
 	})
 }
 
