@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DCA Backtester</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0f12;
+            --surface: #13161b;
+            --surface2: #1a1e25;
+            --border: #252a34;
+            --accent: #00e5a0;
+            --accent2: #ff6b4a;
+            --accent3: #4a9eff;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --mono: 'IBM Plex Mono', monospace;
+            --sans: 'IBM Plex Sans KR', sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            min-height: 100vh;
+        }
+
+        header {
+            border-bottom: 1px solid var(--border);
+            padding: 18px 32px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--surface);
+        }
+
+        .logo {
+            font-family: var(--mono);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: 0.06em;
+        }
+
+        .logo span { color: var(--muted); }
+
+        header p {
+            font-size: 0.78rem;
+            color: var(--muted);
+            letter-spacing: 0.04em;
+        }
+
+        .page {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: calc(100vh - 57px);
+        }
+
+        aside {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 28px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-label {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--muted);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            margin-top: 24px;
+        }
+
+        .section-label:first-child { margin-top: 0; }
+
+        .field { margin-bottom: 14px; }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-bottom: 5px;
+            letter-spacing: 0.03em;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 9px 12px;
+            border-radius: 5px;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input:focus, select:focus { border-color: var(--accent); }
+
+        select {
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 28px;
+        }
+
+        .run-btn {
+            margin-top: 24px;
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: #0d0f12;
+            border: none;
+            border-radius: 5px;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .run-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+        .run-btn:active { transform: translateY(0); }
+        .run-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+        .stat-strip {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .stat {
+            flex: 1;
+            padding: 16px 20px;
+            border-right: 1px solid var(--border);
+        }
+
+        .stat:last-child { border-right: none; }
+
+        .stat-lbl {
+            font-family: var(--mono);
+            font-size: 0.62rem;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .stat-val {
+            font-family: var(--mono);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .stat-val.pos { color: var(--accent); }
+        .stat-val.neg { color: var(--accent2); }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .charts-area {
+            flex: 1;
+            display: grid;
+            grid-template-rows: 260px 260px 200px;
+            padding: 24px;
+            gap: 16px;
+            overflow-y: auto;
+        }
+
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .chart-title {
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 14px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.68rem;
+            color: var(--muted);
+            font-family: var(--mono);
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .chart-wrap {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 10px;
+            color: var(--muted);
+        }
+
+        .empty-icon { font-size: 2.5rem; opacity: 0.3; }
+
+        .empty-text {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+        }
+
+        .error-bar {
+            background: rgba(255,107,74,0.12);
+            border: 1px solid rgba(255,107,74,0.3);
+            color: var(--accent2);
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            padding: 10px 16px;
+            margin: 16px 24px 0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .page { grid-template-columns: 1fr; }
+            aside {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 12px;
+                padding: 16px;
+            }
+            .field { flex: 1 1 140px; margin-bottom: 0; }
+            .run-btn { margin-top: 12px; flex: 1 1 100%; }
+            .charts-area { grid-template-rows: 300px 220px; }
+            .stat-strip { flex-wrap: wrap; }
+            .stat { flex: 1 1 40%; border-bottom: 1px solid var(--border); }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <div class="logo">DCA<span>/</span>BACKTEST</div>
+        <p>Dollar-Cost Averaging &amp; Drawdown Analyzer</p>
+    </div>
+</header>
+
+<div class="page">
+    <aside>
+        <div class="section-label">종목 설정</div>
+        <div class="field">
+            <label for="symbol">티커 심볼</label>
+            <input type="text" id="symbol" placeholder="AAPL, QQQ, BTC-USD" value="{{.Symbol}}">
+        </div>
+        <div class="field">
+            <label for="amount">투자 금액 (USD)</label>
+            <input type="number" id="amount" value="{{.Amount}}" min="1">
+        </div>
+
+        <div class="section-label">기간 &amp; 주기</div>
+        <div class="field">
+            <label for="startDate">시작일</label>
+            <input type="date" id="startDate" value="{{.StartDate}}">
+        </div>
+        <div class="field">
+            <label for="interval">투자 주기</label>
+            <select id="interval">
+                <option value="monthly" {{if eq .Interval "monthly"}}selected{{end}}>월별 (Monthly)</option>
+                <option value="weekly" {{if eq .Interval "weekly"}}selected{{end}}>주별 (Weekly)</option>
+            </select>
+        </div>
+
+        <button class="run-btn" id="runBtn" onclick="runBacktest()">▶ RUN BACKTEST</button>
+    </aside>
+
+    <main>
+        <div class="stat-strip">
+            <div class="stat">
+                <div class="stat-lbl">Total Invested</div>
+                <div class="stat-val" id="statInvested">—</div>
+            </div>
+            <div class="stat">
+                <div class="stat-lbl">Portfolio Value</div>
+                <div class="stat-val" id="statValue">—</div>
+            </div>
+            <div class="stat">
+                <div class="stat-lbl">Profit / Loss</div>
+                <div class="stat-val" id="statPL">—</div>
+            </div>
+            <div class="stat">
+                <div class="stat-lbl">Max Drawdown</div>
+                <div class="stat-val neg" id="statMDD">—</div>
+            </div>
+            <div class="stat">
+                <div class="stat-lbl">Units Held</div>
+                <div class="stat-val" id="statUnits">—</div>
+            </div>
+        </div>
+
+        <div class="error-bar" id="errorBar"></div>
+
+        <div class="charts-area">
+            <!-- 1. Price Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <span class="chart-title">Close Price</span>
+                    <div class="chart-legend">
+                        <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>Close Price</div>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <div class="empty-state" id="emptyPrice">
+                        <div class="empty-icon">💹</div>
+                        <div class="empty-text">백테스트를 실행하세요</div>
+                    </div>
+                    <canvas id="priceChart" style="display:none"></canvas>
+                </div>
+            </div>
+
+            <!-- 2. DCA Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <span class="chart-title">DCA Portfolio Value</span>
+                    <div class="chart-legend">
+                        <div class="legend-item"><div class="legend-dot" style="background:#00e5a0"></div>Portfolio Value</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div>Total Invested</div>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <div class="empty-state" id="emptyDCA">
+                        <div class="empty-icon">📈</div>
+                        <div class="empty-text">백테스트를 실행하세요</div>
+                    </div>
+                    <canvas id="dcaChart" style="display:none"></canvas>
+                </div>
+            </div>
+
+            <!-- 3. Drawdown Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <span class="chart-title">Drawdown (%)</span>
+                    <div class="chart-legend">
+                        <div class="legend-item"><div class="legend-dot" style="background:#ff6b4a"></div>Drawdown</div>
+                        <div class="legend-item">
+                            <div style="width:14px;height:2px;background:#ffd166;border-radius:0;flex-shrink:0"></div>
+                            Max DD
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <div class="empty-state" id="emptyMDD">
+                        <div class="empty-icon">📉</div>
+                        <div class="empty-text">백테스트를 실행하세요</div>
+                    </div>
+                    <canvas id="mddChart" style="display:none"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+let priceChartInst = null;
+let dcaChartInst = null;
+let mddChartInst = null;
+
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = '#252a34';
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 10;
+
+function fmt(n) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency', currency: 'USD', maximumFractionDigits: 0
+    }).format(n);
+}
+
+function computeMDD(history) {
+    let peak = -Infinity;
+    let maxDD = 0;
+    const dds = history.map(pt => {
+        if (pt.value > peak) peak = pt.value;
+        const dd = peak > 0 ? ((pt.value - peak) / peak) * 100 : 0;
+        if (dd < maxDD) maxDD = dd;
+        return dd;
+    });
+    return { dds, maxDD };
+}
+
+async function runBacktest() {
+    const symbol    = document.getElementById('symbol').value.trim().toUpperCase();
+    const amount    = parseFloat(document.getElementById('amount').value);
+    const startDate = document.getElementById('startDate').value;
+    const interval  = document.getElementById('interval').value;
+
+    if (!symbol || !amount || !startDate) return;
+
+    const btn = document.getElementById('runBtn');
+    btn.textContent = '⏳ LOADING...';
+    btn.disabled = true;
+
+    const errBar = document.getElementById('errorBar');
+    errBar.style.display = 'none';
+
+    try {
+        const url = `/api/backtest?symbol=${encodeURIComponent(symbol)}&amount=${amount}&startDate=${startDate}&interval=${interval}`;
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (!res.ok || json.error) {
+            throw new Error(json.error || `HTTP ${res.status}`);
+        }
+
+        const { result, history } = json;
+
+        if (!history || history.length === 0) {
+            throw new Error('데이터가 없습니다. 티커나 날짜를 확인해주세요.');
+        }
+
+        const { dds, maxDD } = computeMDD(history);
+
+        // Update stats
+        const pl = result.profitLoss;
+        document.getElementById('statInvested').textContent = fmt(result.totalInvested);
+        document.getElementById('statValue').textContent    = fmt(result.totalValue);
+        const plEl = document.getElementById('statPL');
+        plEl.textContent = `${pl >= 0 ? '+' : ''}${fmt(pl)} (${result.profitLossPct.toFixed(1)}%)`;
+        plEl.className = 'stat-val ' + (pl >= 0 ? 'pos' : 'neg');
+        document.getElementById('statMDD').textContent   = `${maxDD.toFixed(2)}%`;
+        document.getElementById('statUnits').textContent = result.totalUnits.toFixed(4);
+
+        const labels    = history.map(h => h.date);
+        const valData   = history.map(h => h.value);
+        const invData   = history.map(h => h.invested);
+        const priceData = history.map(h => h.price);
+
+        renderPrice(labels, priceData);
+        renderDCA(labels, valData, invData);
+        renderMDD(labels, dds, maxDD);
+
+    } catch (e) {
+        errBar.textContent = '⚠ ' + e.message;
+        errBar.style.display = 'block';
+    } finally {
+        btn.textContent = '▶ RUN BACKTEST';
+        btn.disabled = false;
+    }
+}
+
+function renderPrice(labels, priceData) {
+    document.getElementById('emptyPrice').style.display = 'none';
+    const canvas = document.getElementById('priceChart');
+    canvas.style.display = 'block';
+
+    if (priceChartInst) priceChartInst.destroy();
+
+    priceChartInst = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Close Price',
+                    data: priceData,
+                    borderColor: '#a78bfa',
+                    backgroundColor: 'rgba(167,139,250,0.07)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1a1e25',
+                    borderColor: '#252a34',
+                    borderWidth: 1,
+                    titleColor: '#64748b',
+                    bodyColor: '#e2e8f0',
+                    callbacks: {
+                        label: ctx => `Close: ${fmt(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { color: '#1a1e25' }, ticks: { maxTicksLimit: 8 } },
+                y: {
+                    grid: { color: '#1a1e25' },
+                    ticks: { callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) }
+                }
+            }
+        }
+    });
+}
+
+function renderDCA(labels, valData, invData) {
+    document.getElementById('emptyDCA').style.display = 'none';
+    const canvas = document.getElementById('dcaChart');
+    canvas.style.display = 'block';
+
+    if (dcaChartInst) dcaChartInst.destroy();
+
+    dcaChartInst = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Portfolio Value',
+                    data: valData,
+                    borderColor: '#00e5a0',
+                    backgroundColor: 'rgba(0,229,160,0.06)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                },
+                {
+                    label: 'Total Invested',
+                    data: invData,
+                    borderColor: '#4a9eff',
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 0,
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1a1e25',
+                    borderColor: '#252a34',
+                    borderWidth: 1,
+                    titleColor: '#64748b',
+                    bodyColor: '#e2e8f0',
+                    callbacks: {
+                        label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { color: '#1a1e25' }, ticks: { maxTicksLimit: 8 } },
+                y: {
+                    grid: { color: '#1a1e25' },
+                    ticks: { callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) }
+                }
+            }
+        }
+    });
+}
+
+function renderMDD(labels, dds, maxDD) {
+    document.getElementById('emptyMDD').style.display = 'none';
+    const canvas = document.getElementById('mddChart');
+    canvas.style.display = 'block';
+
+    if (mddChartInst) mddChartInst.destroy();
+
+    mddChartInst = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Drawdown',
+                    data: dds,
+                    borderColor: '#ff6b4a',
+                    backgroundColor: 'rgba(255,107,74,0.10)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 1.5,
+                },
+                {
+                    label: 'Max Drawdown',
+                    data: new Array(labels.length).fill(maxDD),
+                    borderColor: '#ffd166',
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 1,
+                    borderDash: [6, 3],
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1a1e25',
+                    borderColor: '#252a34',
+                    borderWidth: 1,
+                    titleColor: '#64748b',
+                    bodyColor: '#e2e8f0',
+                    callbacks: {
+                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { color: '#1a1e25' }, ticks: { maxTicksLimit: 8 } },
+                y: {
+                    max: 0,
+                    grid: { color: '#1a1e25' },
+                    ticks: { callback: v => v.toFixed(0) + '%' }
+                }
+            }
+        }
+    });
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') runBacktest();
+});
+</script>
+</body>
+</html>
