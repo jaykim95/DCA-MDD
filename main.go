@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -16,8 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"gopkg.in/ini.v1"
 )
 
 // ── Yahoo Finance API 응답 구조체 ────────────────────────────────────────────
@@ -322,6 +321,22 @@ func writeJSONError(w http.ResponseWriter, msg string) {
 
 // ── 유틸리티 ─────────────────────────────────────────────────────────────────
 
+func GetFreePort() (int, error) {
+	// ":0"은 운영체제에게 사용 가능한 임의의 포트를 할당해달라는 의미입니다.
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close() // 포트를 찾은 후 즉시 닫아야 다른 곳에서 사용 가능
+
+	return l.Addr().(*net.TCPAddr).Port, nil
+}
+
 func OpenURL(u string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -365,21 +380,11 @@ func main() {
 		log.Printf("초기 crumb 획득 실패 (요청 시 재시도): %v", err)
 	}
 
-	configPath := findFile("config.ini")
 	templatePath = findFile("index.html")
 	tmpl = template.Must(template.ParseFiles(templatePath))
 
-	cfg, err := ini.Load(configPath)
-	if err != nil {
-		fmt.Println("config.ini 로드 실패, 기본 포트 8080 사용")
-	}
-
-	port := "8080"
-	if cfg != nil {
-		if p := cfg.Section("server").Key("port").String(); p != "" {
-			port = p
-		}
-	}
+	portInt, _ := GetFreePort()
+	port := strconv.Itoa(portInt)
 
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/api/backtest", handleBacktestAPI)
