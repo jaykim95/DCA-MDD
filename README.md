@@ -10,6 +10,7 @@
 * **DCA 시뮬레이션**: 매주 또는 매월 정해진 금액을 투자했을 때의 총 투자액, 현재 가치, 수익률을 계산합니다.
 * **인증 처리**: Yahoo Finance의 쿠키 및 Crumb 토큰 인증 로직이 내장되어 있어 안정적인 데이터 수집이 가능합니다.
 * **웹 인터페이스**: Go의 `html/template`을 사용한 사용자 페이지와 JSON API를 제공합니다.
+* **자동 port 설정**: 서버 실행 시 빈 port를 자동으로 찾습니다.
 * **자동 실행**: 서버 실행 시 기본 브라우저를 통해 자동으로 대시보드를 엽니다.
 
 ---
@@ -19,10 +20,8 @@
 * **Language**: Go (Golang)
 * **API**: Yahoo Finance Chart API (v8)
 * **Dependencies**:
-* `gopkg.in/ini.v1` (설정 파일 로드)
 * `net/http` (서버 및 클라이언트)
 * `html/template` (웹 UI)
-
 
 
 ---
@@ -34,34 +33,21 @@
 * Go 1.16 버전 이상이 설치되어 있어야 합니다.
 * 프로젝트 루트 디렉토리에 다음 파일들이 필요합니다:
 * `index.html`: 결과 시각화를 위한 템플릿 파일
-* `config.ini`: 서버 설정 파일
 
-
-
-### 2. 설정 파일 작성 (`config.ini`)
-
-```ini
-[server]
-port = 8080
-
-```
 
 ### 3. 종목 의존성 설치
 
 ```bash
 go mod init dca-backtester
-go get gopkg.in/ini.v1
-
 ```
 
 ### 4. 실행
 
 ```bash
 go run main.go
-
 ```
 
-실행 후 자동으로 `http://localhost:8080` 페이지가 브라우저에 열립니다.
+실행 후 자동으로 `http://localhost:xxxxx` 페이지가 브라우저에 열립니다.
 
 ---
 
